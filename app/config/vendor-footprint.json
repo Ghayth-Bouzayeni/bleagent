@@ -1,0 +1,78 @@
+{
+  "version": "2026.02.23-1",
+  "generated_at": "2026-03-02T00:00:00Z",
+  "rules": [
+    {
+      "vendor": "linxens",
+      "rule_id": "linxens_001",
+      "priority": 0,
+      "confidence": 1.0,
+      "conditions": {
+        "local_name": {
+          "operator": "starts_with",
+          "value": "LXSSLBT"
+        },
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    },
+    {
+      "vendor": "linxens",
+      "rule_id": "linxens_002",
+      "priority": 1,
+      "confidence": 0.95,
+      "conditions": {
+        "local_name": {
+          "operator": "starts_with",
+          "value": "LXSSLBT"
+        }
+      }
+    },
+    {
+      "vendor": "blc-molex",
+      "rule_id": "molex_001",
+      "priority": 1,
+      "confidence": 0.95,
+      "conditions": {
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000fd0d-0000-1000-8000-00805f9b34fb"
+        },
+        "service_data_hex": {
+          "operator": "contains_pattern",
+          "value": "b118c9d7eac2"
+        }
+      }
+    },
+    {
+      "vendor": "blc-mokko",
+      "rule_id": "mokko_001",
+      "priority": 1,
+      "confidence": 0.90,
+      "conditions": {
+        "manufacturer_company_id": {
+          "operator": "equals",
+          "value": "004c"
+        },
+        "manufacturer_data_hex": {
+          "operator": "starts_with",
+          "value": "0215"
+        }
+      }
+    },
+    {
+      "vendor": "linxens",
+      "rule_id": "linxens_003",
+      "priority": 2,
+      "confidence": 0.90,
+      "conditions": {
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    }
+  ]
+}

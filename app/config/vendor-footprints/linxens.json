@@ -1,0 +1,42 @@
+{
+  "vendor": "linxens",
+  "rules": [
+    {
+      "rule_id": "linxens_001",
+      "priority": 0,
+      "confidence": 1.0,
+      "conditions": {
+        "local_name": {
+          "operator": "starts_with",
+          "value": "LXSSLBT"
+        },
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    },
+    {
+      "rule_id": "linxens_002",
+      "priority": 1,
+      "confidence": 0.95,
+      "conditions": {
+        "local_name": {
+          "operator": "starts_with",
+          "value": "LXSSLBT"
+        }
+      }
+    },
+    {
+      "rule_id": "linxens_003",
+      "priority": 2,
+      "confidence": 0.90,
+      "conditions": {
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    }
+  ]
+}

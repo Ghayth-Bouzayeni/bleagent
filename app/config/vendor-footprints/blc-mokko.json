@@ -1,0 +1,20 @@
+{
+  "vendor": "blc-mokko",
+  "rules": [
+    {
+      "rule_id": "mokko_001",
+      "priority": 1,
+      "confidence": 0.90,
+      "conditions": {
+        "manufacturer_company_id": {
+          "operator": "equals",
+          "value": "004c"
+        },
+        "manufacturer_data_hex": {
+          "operator": "starts_with",
+          "value": "0215"
+        }
+      }
+    }
+  ]
+}
