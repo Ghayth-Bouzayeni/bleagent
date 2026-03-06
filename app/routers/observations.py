@@ -16,12 +16,26 @@ router = APIRouter(prefix="/observations", tags=["observations"])
 
 class ObservationFrame(BaseModel):
     """Request model for a single observation"""
-    beacon_uuid: str = Field(..., description="BLE Beacon UUID (stable identifier)")
-    beacon_major: int | None = Field(None, description="iBeacon Major value")
-    beacon_minor: int | None = Field(None, description="iBeacon Minor value")
-    mac: str | None = Field(None, description="MAC address (rotating, optional)")
+    # PRIMARY TAG IDENTIFIER (REQUIRED)
+    # - Moko/Molex: BLEcon service data (e.g., "3b00c60c98ec...")
+    # - Linxens: Device name (e.g., "LXSSLBT231")
+    tag_id: str = Field(..., description="Unique tag identifier (BLEcon service data or device name)")
+    
+    # Channel and raw BLE data
+    channel_type: str | None = Field(None, description="Channel type: blecon/standard/ibeacon")
+    service_data_hex: str | None = Field(None, description="BLEcon service data (Moko/Molex)")
+    local_name: str | None = Field(None, description="Device name (Linxens)")
+    mac: str | None = Field(None, description="MAC address (rotating, reference only)")
+    
+    # iBeacon identifiers (optional, not used for tracking)
+    beacon_uuid: str | None = Field(None, description="iBeacon UUID (reference only)")
+    beacon_major: int | None = Field(None, description="iBeacon Major value (reference only)")
+    beacon_minor: int | None = Field(None, description="iBeacon Minor value (reference only)")
+    
+    # Observation data
     ts_utc: datetime = Field(..., description="Timestamp in UTC")
     rssi: int = Field(..., description="RSSI signal strength")
+    tx_power: int | None = Field(None, description="TX power in dBm (optional)")
     lat: float = Field(..., description="Latitude")
     lon: float = Field(..., description="Longitude")
     accuracy_m: float | None = Field(None, description="GPS accuracy in meters")
@@ -73,12 +87,17 @@ async def create_observations(
         try:
             # Create observation record
             observation = Observation(
+                tag_id=frame.tag_id,
+                channel_type=frame.channel_type,
+                service_data_hex=frame.service_data_hex,
+                local_name=frame.local_name,
+                mac=frame.mac,
                 beacon_uuid=frame.beacon_uuid,
                 beacon_major=frame.beacon_major,
                 beacon_minor=frame.beacon_minor,
-                mac=frame.mac,
                 ts_utc=frame.ts_utc,
                 rssi=frame.rssi,
+                tx_power=frame.tx_power,
                 lat=frame.lat,
                 lon=frame.lon,
                 accuracy_m=frame.accuracy_m,
@@ -93,9 +112,13 @@ async def create_observations(
             
             db.add(observation)
             
-            # Update tag state (using beacon_uuid as stable identifier)
+            # Update tag state (using tag_id as stable identifier)
             await upsert_tag_state(
                 db=db,
+                tag_id=frame.tag_id,
+                vendor=frame.vendor,
+                confidence=frame.confidence,
+                rule_id=frame.rule_id,
                 beacon_uuid=frame.beacon_uuid,
                 beacon_major=frame.beacon_major,
                 beacon_minor=frame.beacon_minor,
@@ -103,8 +126,6 @@ async def create_observations(
                 lon=frame.lon,
                 rssi=frame.rssi,
                 last_seen=frame.ts_utc,
-                vendor=frame.vendor,
-                confidence=frame.confidence,
                 site_id=frame.site_id or "unknown"
             )
             

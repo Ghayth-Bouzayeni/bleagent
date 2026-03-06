@@ -1,9 +1,9 @@
 {
-  "vendor": "blc-molex",
+  "vendor": "blc-moko",
   "note": "Using BLEcon channel as primary identifier. iBeacon rules commented out for reference.",
   "rules": [
     {
-      "rule_id": "molex_001",
+      "rule_id": "moko_001",
       "priority": 0,
       "confidence": 1.0,
       "description": "BLEcon channel - Primary tracking method using service data as unique tag ID",
@@ -14,14 +14,14 @@
         },
         "service_data_hex": {
           "operator": "starts_with",
-          "value": "0000"
+          "value": "3b00"
         }
       }
     }
   ],
   "rules_not_used": [
     {
-      "rule_id": "molex_002",
+      "rule_id": "moko_002",
       "priority": 1,
       "confidence": 0.95,
       "description": "iBeacon channel - Not used (dual-channel devices tracked via BLEcon only)",
@@ -36,19 +36,19 @@
         },
         "beacon_uuid": {
           "operator": "equals",
-          "value": "02ce511a-005c-da01-ffca-e5b11eaba15c"
+          "value": "01ce511a-005c-da01-ffca-e5b11eaba15c"
         }
       }
     },
     {
-      "rule_id": "molex_003",
+      "rule_id": "moko_003",
       "priority": 2,
       "confidence": 0.90,
       "description": "UUID-only fallback - Not used",
       "conditions": {
         "beacon_uuid": {
           "operator": "equals",
-          "value": "02ce511a-005c-da01-ffca-e5b11eaba15c"
+          "value": "01ce511a-005c-da01-ffca-e5b11eaba15c"
         }
       }
     }

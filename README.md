@@ -113,9 +113,17 @@ Stores individual BLE scan observations from mobile devices.
 | Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | Primary key |
-| mac | VARCHAR | MAC address of BLE tag |
+| **tag_id** | VARCHAR | **Unique tag identifier** (BLEcon service data or device name) |
+| channel_type | VARCHAR | Channel type: blecon/standard/ibeacon |
+| service_data_hex | VARCHAR | BLEcon service data (Moko/Molex) |
+| local_name | VARCHAR | Device name (Linxens) |
+| mac | VARCHAR | MAC address (reference only, rotates) |
+| beacon_uuid | VARCHAR | iBeacon UUID (reference only) |
+| beacon_major | INTEGER | iBeacon Major (reference only) |
+| beacon_minor | INTEGER | iBeacon Minor (reference only) |
 | ts_utc | TIMESTAMP | Observation timestamp (UTC) |
 | rssi | INTEGER | Signal strength |
+| tx_power | INTEGER | TX power in dBm (optional) |
 | lat | FLOAT | Latitude |
 | lon | FLOAT | Longitude |
 | accuracy_m | FLOAT | GPS accuracy in meters |
@@ -127,20 +135,29 @@ Stores individual BLE scan observations from mobile devices.
 | footprint_version | VARCHAR | Footprint version used |
 | created_at | TIMESTAMP | Record creation time |
 
+**Tag ID Format:**
+- **Moko**: BLEcon service data (e.g., `3b00c60c98ec1b114827aa2e22f8fe2aeecf0300`)
+- **Molex**: BLEcon service data (e.g., `0000355ea59f4dfb42f196794fa0d0c9301d0300`)
+- **Linxens**: Device name (e.g., `LXSSLBT231`)
+
 ### `tag_state`
 Maintains current state of each detected BLE tag.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| mac | VARCHAR | Primary key - MAC address |
+| **tag_id** | VARCHAR | **Primary key** - Unique tag identifier |
+| vendor | VARCHAR | Detected vendor |
+| confidence | FLOAT | Classification confidence |
+| rule_id | VARCHAR | Rule that matched |
 | last_lat | FLOAT | Last known latitude |
 | last_lon | FLOAT | Last known longitude |
 | last_rssi | INTEGER | Last RSSI value |
 | last_seen | TIMESTAMP | Last observation time |
-| vendor | VARCHAR | Detected vendor |
-| confidence | FLOAT | Classification confidence |
 | site_id | VARCHAR | Associated site |
 | is_moving | BOOLEAN | Movement indicator |
+| beacon_uuid | VARCHAR | iBeacon UUID (reference) |
+| beacon_major | INTEGER | iBeacon Major (reference) |
+| beacon_minor | INTEGER | iBeacon Minor (reference) |
 | updated_at | TIMESTAMP | Last update time |
 
 ### `ble_config`
@@ -201,14 +218,36 @@ Accepts a batch of BLE observation frames. Validates and stores observations, up
 ```json
 [
   {
-    "mac": "AA:BB:CC:DD:EE:FF",
-    "ts_utc": "2026-03-02T12:34:56Z",
-    "rssi": -65,
+    "tag_id": "3b00c60c98ec1b114827aa2e22f8fe2aeecf0300",
+    "channel_type": "blecon",
+    "service_data_hex": "3b00c60c98ec1b114827aa2e22f8fe2aeecf0300",
+    "mac": "F7:42:61:EB:EF:C1",
+    "ts_utc": "2026-03-06T12:34:56Z",
+    "rssi": -61,
+    "tx_power": 4,
     "lat": 40.7128,
     "lon": -74.0060,
     "accuracy_m": 15.0,
+    "vendor": "blc-moko",
+    "confidence": 1.0,
+    "rule_id": "moko_001",
+    "site_id": "nyc_downtown",
+    "device_id": "device_001",
+    "footprint_version": "2026.03.06-1"
+  },
+  {
+    "tag_id": "LXSSLBT231",
+    "channel_type": "standard",
+    "local_name": "LXSSLBT231",
+    "mac": "C0:53:58:4C:02:31",
+    "ts_utc": "2026-03-06T12:35:00Z",
+    "rssi": -70,
+    "tx_power": -4,
+    "lat": 40.7130,
+    "lon": -74.0062,
+    "accuracy_m": 20.0,
     "vendor": "linxens",
-    "confidence": 0.95,
+    "confidence": 1.0,
     "rule_id": "linxens_001",
     "site_id": "nyc_downtown",
     "device_id": "device_001",

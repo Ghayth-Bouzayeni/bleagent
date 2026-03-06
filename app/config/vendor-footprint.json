@@ -1,12 +1,14 @@
 {
-  "version": "2026.02.23-1",
-  "generated_at": "2026-03-02T00:00:00Z",
+  "version": "2026.03.06-1",
+  "generated_at": "2026-03-06T00:00:00Z",
+  "note": "BLEcon channel used as primary identifier for dual-channel tags (Moko/Molex). Service data is unique per tag.",
   "rules": [
     {
       "vendor": "linxens",
       "rule_id": "linxens_001",
       "priority": 0,
       "confidence": 1.0,
+      "description": "Single channel - Device name + service UUID",
       "conditions": {
         "local_name": {
           "operator": "starts_with",
@@ -15,6 +17,40 @@
         "service_uuids": {
           "operator": "contains",
           "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    },
+    {
+      "vendor": "blc-moko",
+      "rule_id": "moko_001",
+      "priority": 0,
+      "confidence": 1.0,
+      "description": "BLEcon channel - Service data is unique tag identifier",
+      "conditions": {
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000fd0d-0000-1000-8000-00805f9b34fb"
+        },
+        "service_data_hex": {
+          "operator": "starts_with",
+          "value": "3b00"
+        }
+      }
+    },
+    {
+      "vendor": "blc-molex",
+      "rule_id": "molex_001",
+      "priority": 0,
+      "confidence": 1.0,
+      "description": "BLEcon channel - Service data is unique tag identifier",
+      "conditions": {
+        "service_uuids": {
+          "operator": "contains",
+          "value": "0000fd0d-0000-1000-8000-00805f9b34fb"
+        },
+        "service_data_hex": {
+          "operator": "starts_with",
+          "value": "0000"
         }
       }
     },
@@ -23,34 +59,22 @@
       "rule_id": "linxens_002",
       "priority": 1,
       "confidence": 0.95,
+      "description": "Device name only fallback",
       "conditions": {
         "local_name": {
           "operator": "starts_with",
           "value": "LXSSLBT"
         }
       }
-    },
+    }
+  ],
+  "rules_not_used": [
     {
-      "vendor": "blc-molex",
-      "rule_id": "molex_001",
+      "vendor": "blc-moko",
+      "rule_id": "moko_002",
       "priority": 1,
       "confidence": 0.95,
-      "conditions": {
-        "service_uuids": {
-          "operator": "contains",
-          "value": "0000fd0d-0000-1000-8000-00805f9b34fb"
-        },
-        "service_data_hex": {
-          "operator": "contains_pattern",
-          "value": "b118c9d7eac2"
-        }
-      }
-    },
-    {
-      "vendor": "blc-mokko",
-      "rule_id": "mokko_001",
-      "priority": 1,
-      "confidence": 0.90,
+      "description": "iBeacon channel - Not used (tracked via BLEcon only)",
       "conditions": {
         "manufacturer_company_id": {
           "operator": "equals",
@@ -59,18 +83,57 @@
         "manufacturer_data_hex": {
           "operator": "starts_with",
           "value": "0215"
+        },
+        "beacon_uuid": {
+          "operator": "equals",
+          "value": "01ce511a-005c-da01-ffca-e5b11eaba15c"
         }
       }
     },
     {
-      "vendor": "linxens",
-      "rule_id": "linxens_003",
+      "vendor": "blc-molex",
+      "rule_id": "molex_002",
+      "priority": 1,
+      "confidence": 0.95,
+      "description": "iBeacon channel - Not used (tracked via BLEcon only)",
+      "conditions": {
+        "manufacturer_company_id": {
+          "operator": "equals",
+          "value": "004c"
+        },
+        "manufacturer_data_hex": {
+          "operator": "starts_with",
+          "value": "0215"
+        },
+        "beacon_uuid": {
+          "operator": "equals",
+          "value": "02ce511a-005c-da01-ffca-e5b11eaba15c"
+        }
+      }
+    },
+    {
+      "vendor": "blc-moko",
+      "rule_id": "moko_003",
       "priority": 2,
       "confidence": 0.90,
+      "description": "UUID-only fallback - Not used",
       "conditions": {
-        "service_uuids": {
-          "operator": "contains",
-          "value": "0000181a-0000-1000-8000-00805f9b34fb"
+        "beacon_uuid": {
+          "operator": "equals",
+          "value": "01ce511a-005c-da01-ffca-e5b11eaba15c"
+        }
+      }
+    },
+    {
+      "vendor": "blc-molex",
+      "rule_id": "molex_003",
+      "priority": 2,
+      "confidence": 0.90,
+      "description": "UUID-only fallback - Not used",
+      "conditions": {
+        "beacon_uuid": {
+          "operator": "equals",
+          "value": "02ce511a-005c-da01-ffca-e5b11eaba15c"
         }
       }
     }

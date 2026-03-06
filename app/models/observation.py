@@ -13,21 +13,30 @@ class Observation(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
-    # Stable BLE Beacon Identifiers (use these for tracking)
-    beacon_uuid = Column(String, nullable=True, index=True)  # iBeacon UUID
-    beacon_major = Column(Integer, nullable=True)            # iBeacon Major
-    beacon_minor = Column(Integer, nullable=True)            # iBeacon Minor
+    # PRIMARY TAG IDENTIFIER (REQUIRED)
+    # - Moko/Molex: BLEcon service data (e.g., "3b00c60c98ec...")
+    # - Linxens: Device name (e.g., "LXSSLBT231")
+    tag_id = Column(String, nullable=False, index=True)
     
-    # Alternative: Eddystone identifiers
+    # Channel and raw BLE data
+    channel_type = Column(String, nullable=True)             # "blecon", "standard", "ibeacon"
+    service_data_hex = Column(String, nullable=True)         # BLEcon service data (Moko/Molex)
+    local_name = Column(String, nullable=True)               # Device name (Linxens)
+    mac = Column(String, nullable=True)                      # MAC address (reference only, rotates!)
+    
+    # iBeacon identifiers (optional, stored but not used for tracking Moko/Molex)
+    beacon_uuid = Column(String, nullable=True)              # iBeacon UUID (reference only)
+    beacon_major = Column(Integer, nullable=True)            # iBeacon Major (reference only)
+    beacon_minor = Column(Integer, nullable=True)            # iBeacon Minor (reference only)
+    
+    # Eddystone identifiers (optional, for future use)
     namespace_id = Column(String, nullable=True)             # Eddystone Namespace
     instance_id = Column(String, nullable=True)              # Eddystone Instance
-    
-    # MAC address (unstable, for reference only)
-    mac = Column(String, nullable=True)                      # Rotating MAC (not for tracking!)
     
     # Observation data
     ts_utc = Column(TIMESTAMP(timezone=True), nullable=False)
     rssi = Column(Integer, nullable=False)
+    tx_power = Column(Integer, nullable=True)                # TX power (dBm) - optional
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
     accuracy_m = Column(Float, nullable=True)
@@ -40,4 +49,4 @@ class Observation(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
-        return f"<Observation(beacon_uuid={self.beacon_uuid}, vendor={self.vendor}, rssi={self.rssi})>"
+        return f"<Observation(tag_id={self.tag_id}, vendor={self.vendor}, rssi={self.rssi})>"
