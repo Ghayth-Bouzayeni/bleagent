@@ -16,8 +16,8 @@ async def upsert_tag_state(
     beacon_uuid: str | None,
     beacon_major: int | None,
     beacon_minor: int | None,
-    lat: float,
-    lon: float,
+    lat: float | None,
+    lon: float | None,
     rssi: int,
     last_seen: datetime,
     site_id: str
@@ -37,8 +37,8 @@ async def upsert_tag_state(
         beacon_uuid: iBeacon UUID (optional, reference only)
         beacon_major: iBeacon Major value (optional, reference only)
         beacon_minor: iBeacon Minor value (optional, reference only)
-        lat: Latitude
-        lon: Longitude
+        lat: Latitude (None if GPS unavailable)
+        lon: Longitude (None if GPS unavailable)
         rssi: RSSI signal strength
         last_seen: Timestamp of last observation
         site_id: Site identifier
@@ -59,23 +59,14 @@ async def upsert_tag_state(
         tag_state.beacon_uuid = beacon_uuid
         tag_state.beacon_major = beacon_major
         tag_state.beacon_minor = beacon_minor
-        tag_state.last_lat = lat
-        tag_state.last_lon = lon
+        # Only update location if GPS was available
+        if lat is not None and lon is not None:
+            tag_state.last_lat = lat
+            tag_state.last_lon = lon
         tag_state.last_rssi = rssi
         tag_state.last_seen = last_seen
         tag_state.site_id = site_id
         tag_state.updated_at = datetime.now(timezone.utc)
-        
-        # Simple movement detection: compare with previous location
-        # In production, implement more sophisticated logic
-        if tag_state.last_lat and tag_state.last_lon:
-            # Calculate simple distance (rough approximation)
-            lat_diff = abs(tag_state.last_lat - lat)
-            lon_diff = abs(tag_state.last_lon - lon)
-            distance_approx = (lat_diff**2 + lon_diff**2)**0.5
-            
-            # If moved more than ~0.0001 degrees (~11m), mark as moving
-            tag_state.is_moving = distance_approx > 0.0001
     else:
         # Create new tag state
         tag_state = TagState(
@@ -86,8 +77,8 @@ async def upsert_tag_state(
             beacon_uuid=beacon_uuid,
             beacon_major=beacon_major,
             beacon_minor=beacon_minor,
-            last_lat=lat,
-            last_lon=lon,
+            last_lat=lat,       # None if GPS unavailable
+            last_lon=lon,       # None if GPS unavailable
             last_rssi=rssi,
             last_seen=last_seen,
             site_id=site_id,

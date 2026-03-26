@@ -37,8 +37,8 @@ class Observation(Base):
     ts_utc = Column(TIMESTAMP(timezone=True), nullable=False)
     rssi = Column(Integer, nullable=False)
     tx_power = Column(Integer, nullable=True)                # TX power (dBm) - optional
-    lat = Column(Float, nullable=False)
-    lon = Column(Float, nullable=False)
+    lat = Column(Float, nullable=True)                      # None when GPS unavailable (app sends 0.0)
+    lon = Column(Float, nullable=True)                      # None when GPS unavailable (app sends 0.0)
     accuracy_m = Column(Float, nullable=True)
     vendor = Column(String, nullable=False)
     confidence = Column(Float, nullable=False)

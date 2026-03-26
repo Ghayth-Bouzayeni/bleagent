@@ -85,6 +85,10 @@ async def create_observations(
             continue
         
         try:
+            # Normalize 0.0/0.0 to None (app sends 0.0 when GPS unavailable)
+            lat = frame.lat if frame.lat != 0.0 or frame.lon != 0.0 else None
+            lon = frame.lon if frame.lat != 0.0 or frame.lon != 0.0 else None
+
             # Create observation record
             observation = Observation(
                 tag_id=frame.tag_id,
@@ -98,8 +102,8 @@ async def create_observations(
                 ts_utc=frame.ts_utc,
                 rssi=frame.rssi,
                 tx_power=frame.tx_power,
-                lat=frame.lat,
-                lon=frame.lon,
+                lat=lat,
+                lon=lon,
                 accuracy_m=frame.accuracy_m,
                 vendor=frame.vendor,
                 confidence=frame.confidence,
@@ -109,9 +113,9 @@ async def create_observations(
                 footprint_version=frame.footprint_version,
                 created_at=datetime.now(timezone.utc)
             )
-            
+
             db.add(observation)
-            
+
             # Update tag state (using tag_id as stable identifier)
             await upsert_tag_state(
                 db=db,
@@ -122,8 +126,8 @@ async def create_observations(
                 beacon_uuid=frame.beacon_uuid,
                 beacon_major=frame.beacon_major,
                 beacon_minor=frame.beacon_minor,
-                lat=frame.lat,
-                lon=frame.lon,
+                lat=lat,
+                lon=lon,
                 rssi=frame.rssi,
                 last_seen=frame.ts_utc,
                 site_id=frame.site_id or "unknown"
