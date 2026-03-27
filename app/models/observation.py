@@ -3,13 +3,16 @@ Observation model - stores BLE scan observations from mobile devices
 """
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Float, TIMESTAMP
+from sqlalchemy import Column, String, Integer, Float, TIMESTAMP, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
 
 class Observation(Base):
     __tablename__ = "observations"
+    __table_args__ = (
+        UniqueConstraint("tag_id", "ts_utc", name="uq_observation_tag_ts"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
@@ -28,10 +31,6 @@ class Observation(Base):
     beacon_uuid = Column(String, nullable=True)              # iBeacon UUID (reference only)
     beacon_major = Column(Integer, nullable=True)            # iBeacon Major (reference only)
     beacon_minor = Column(Integer, nullable=True)            # iBeacon Minor (reference only)
-    
-    # Eddystone identifiers (optional, for future use)
-    namespace_id = Column(String, nullable=True)             # Eddystone Namespace
-    instance_id = Column(String, nullable=True)              # Eddystone Instance
     
     # Observation data
     ts_utc = Column(TIMESTAMP(timezone=True), nullable=False)

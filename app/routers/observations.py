@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert
 
 from app.database import get_db
 from app.models.observation import Observation
@@ -85,59 +86,59 @@ async def create_observations(
             continue
         
         try:
-            # Normalize 0.0/0.0 to None (app sends 0.0 when GPS unavailable)
-            lat = frame.lat if frame.lat != 0.0 or frame.lon != 0.0 else None
-            lon = frame.lon if frame.lat != 0.0 or frame.lon != 0.0 else None
+            async with db.begin_nested():
+                # Normalize 0.0/0.0 to None (app sends 0.0 when GPS unavailable)
+                lat = frame.lat if frame.lat != 0.0 or frame.lon != 0.0 else None
+                lon = frame.lon if frame.lat != 0.0 or frame.lon != 0.0 else None
 
-            # Create observation record
-            observation = Observation(
-                tag_id=frame.tag_id,
-                channel_type=frame.channel_type,
-                service_data_hex=frame.service_data_hex,
-                local_name=frame.local_name,
-                mac=frame.mac,
-                beacon_uuid=frame.beacon_uuid,
-                beacon_major=frame.beacon_major,
-                beacon_minor=frame.beacon_minor,
-                ts_utc=frame.ts_utc,
-                rssi=frame.rssi,
-                tx_power=frame.tx_power,
-                lat=lat,
-                lon=lon,
-                accuracy_m=frame.accuracy_m,
-                vendor=frame.vendor,
-                confidence=frame.confidence,
-                rule_id=frame.rule_id,
-                site_id=frame.site_id or "unknown",
-                device_id=frame.device_id,
-                footprint_version=frame.footprint_version,
-                created_at=datetime.now(timezone.utc)
-            )
+                # Insert observation, skipping duplicates (same tag_id + ts_utc = retried batch)
+                stmt = insert(Observation).values(
+                    tag_id=frame.tag_id,
+                    channel_type=frame.channel_type,
+                    service_data_hex=frame.service_data_hex,
+                    local_name=frame.local_name,
+                    mac=frame.mac,
+                    beacon_uuid=frame.beacon_uuid,
+                    beacon_major=frame.beacon_major,
+                    beacon_minor=frame.beacon_minor,
+                    ts_utc=frame.ts_utc,
+                    rssi=frame.rssi,
+                    tx_power=frame.tx_power,
+                    lat=lat,
+                    lon=lon,
+                    accuracy_m=frame.accuracy_m,
+                    vendor=frame.vendor,
+                    confidence=frame.confidence,
+                    rule_id=frame.rule_id,
+                    site_id=frame.site_id or "site_default",
+                    device_id=frame.device_id,
+                    footprint_version=frame.footprint_version,
+                    created_at=datetime.now(timezone.utc)
+                ).on_conflict_do_nothing(constraint="uq_observation_tag_ts")
 
-            db.add(observation)
+                await db.execute(stmt)
 
-            # Update tag state (using tag_id as stable identifier)
-            await upsert_tag_state(
-                db=db,
-                tag_id=frame.tag_id,
-                vendor=frame.vendor,
-                confidence=frame.confidence,
-                rule_id=frame.rule_id,
-                beacon_uuid=frame.beacon_uuid,
-                beacon_major=frame.beacon_major,
-                beacon_minor=frame.beacon_minor,
-                lat=lat,
-                lon=lon,
-                rssi=frame.rssi,
-                last_seen=frame.ts_utc,
-                site_id=frame.site_id or "unknown"
-            )
-            
+                # Update tag state (using tag_id as stable identifier)
+                await upsert_tag_state(
+                    db=db,
+                    tag_id=frame.tag_id,
+                    vendor=frame.vendor,
+                    confidence=frame.confidence,
+                    rule_id=frame.rule_id,
+                    beacon_uuid=frame.beacon_uuid,
+                    beacon_major=frame.beacon_major,
+                    beacon_minor=frame.beacon_minor,
+                    lat=lat,
+                    lon=lon,
+                    rssi=frame.rssi,
+                    last_seen=frame.ts_utc,
+                    site_id=frame.site_id or "site_default"
+                )
+
             accepted += 1
-            
+
         except Exception as e:
             rejected += 1
-            # Log error in production
             print(f"Error processing observation: {str(e)}")
     
     # Commit all changes
