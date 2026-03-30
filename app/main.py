@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.routers import health, observations, config
+from app.services.webhook_dispatcher import start_webhook_dispatcher, stop_webhook_dispatcher
 
 # Load environment variables
 load_dotenv()
@@ -25,10 +26,14 @@ async def lifespan(app: FastAPI):
     print("🚀 Initializing database...")
     await init_db()
     print("✅ Database initialized successfully")
+
+    # Startup: launch periodic webhook dispatcher if configured
+    app.state.webhook_dispatcher = start_webhook_dispatcher()
     
     yield
     
     # Shutdown: cleanup if needed
+    await stop_webhook_dispatcher(getattr(app.state, "webhook_dispatcher", None))
     print("👋 Shutting down application")
 
 

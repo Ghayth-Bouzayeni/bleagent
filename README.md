@@ -23,6 +23,7 @@ This backend serves a smartphone BLE scanning app (BLEAgent, built in Android/Ko
 - ✅ Auto-initialization of database schema on startup
 - ✅ CORS-enabled for cross-origin requests
 - ✅ Health check endpoint
+- ✅ Optional webhook dispatcher: pushes recent tag states every 30s (if `WEBHOOK_URL` is set)
 
 ## Project Structure
 
@@ -67,35 +68,45 @@ BLE-Agent-Backend/
 ### Installation Steps
 
 1. **Clone the repository**
+
    ```bash
    cd /home/wejden/Advensia/BLE-Agent-Backend
    ```
 
 2. **Create and activate virtual environment**
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Configure environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env and add your DATABASE_URL
    ```
 
    Example `.env`:
+
    ```env
    DATABASE_URL=postgresql+asyncpg://user:password@host:port/database
    APP_ENV=development
    SITE_ID=site_default
+   WEBHOOK_URL=https://your-backend.example.com/webhook   # optional
+   WEBHOOK_PERIOD_SECONDS=30                              # optional, defaults to 30
+   WEBHOOK_TIMEOUT_SECONDS=5                              # optional
+   WEBHOOK_ACTIVE_WINDOW_SECONDS=120                      # optional, only send tags seen in last N seconds
    ```
 
 5. **Run the application**
+
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
@@ -108,82 +119,87 @@ BLE-Agent-Backend/
 ## Database Schema
 
 ### `observations`
+
 Stores individual BLE scan observations from mobile devices.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| **tag_id** | VARCHAR | **Unique tag identifier** (BLEcon service data or device name) |
-| channel_type | VARCHAR | Channel type: blecon/standard/ibeacon |
-| service_data_hex | VARCHAR | BLEcon service data (Moko/Molex) |
-| local_name | VARCHAR | Device name (Linxens) |
-| mac | VARCHAR | MAC address (reference only, rotates) |
-| beacon_uuid | VARCHAR | iBeacon UUID (reference only) |
-| beacon_major | INTEGER | iBeacon Major (reference only) |
-| beacon_minor | INTEGER | iBeacon Minor (reference only) |
-| ts_utc | TIMESTAMP | Observation timestamp (UTC) |
-| rssi | INTEGER | Signal strength |
-| tx_power | INTEGER | TX power in dBm (optional) |
-| lat | FLOAT | Latitude |
-| lon | FLOAT | Longitude |
-| accuracy_m | FLOAT | GPS accuracy in meters |
-| vendor | VARCHAR | Detected vendor name |
-| confidence | FLOAT | Classification confidence (0-1) |
-| rule_id | VARCHAR | Matching rule identifier |
-| site_id | VARCHAR | Site identifier |
-| device_id | VARCHAR | Device identifier |
-| footprint_version | VARCHAR | Footprint version used |
-| created_at | TIMESTAMP | Record creation time |
+| Column            | Type      | Description                                                    |
+| ----------------- | --------- | -------------------------------------------------------------- |
+| id                | UUID      | Primary key                                                    |
+| **tag_id**        | VARCHAR   | **Unique tag identifier** (BLEcon service data or device name) |
+| channel_type      | VARCHAR   | Channel type: blecon/standard/ibeacon                          |
+| service_data_hex  | VARCHAR   | BLEcon service data (Moko/Molex)                               |
+| local_name        | VARCHAR   | Device name (Linxens)                                          |
+| mac               | VARCHAR   | MAC address (reference only, rotates)                          |
+| beacon_uuid       | VARCHAR   | iBeacon UUID (reference only)                                  |
+| beacon_major      | INTEGER   | iBeacon Major (reference only)                                 |
+| beacon_minor      | INTEGER   | iBeacon Minor (reference only)                                 |
+| ts_utc            | TIMESTAMP | Observation timestamp (UTC)                                    |
+| rssi              | INTEGER   | Signal strength                                                |
+| tx_power          | INTEGER   | TX power in dBm (optional)                                     |
+| lat               | FLOAT     | Latitude                                                       |
+| lon               | FLOAT     | Longitude                                                      |
+| accuracy_m        | FLOAT     | GPS accuracy in meters                                         |
+| vendor            | VARCHAR   | Detected vendor name                                           |
+| confidence        | FLOAT     | Classification confidence (0-1)                                |
+| rule_id           | VARCHAR   | Matching rule identifier                                       |
+| site_id           | VARCHAR   | Site identifier                                                |
+| device_id         | VARCHAR   | Device identifier                                              |
+| footprint_version | VARCHAR   | Footprint version used                                         |
+| created_at        | TIMESTAMP | Record creation time                                           |
 
 **Tag ID Format:**
+
 - **Moko**: BLEcon service data (e.g., `3b00c60c98ec1b114827aa2e22f8fe2aeecf0300`)
 - **Molex**: BLEcon service data (e.g., `0000355ea59f4dfb42f196794fa0d0c9301d0300`)
 - **Linxens**: Device name (e.g., `LXSSLBT231`)
 
 ### `tag_state`
+
 Maintains current state of each detected BLE tag.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| **tag_id** | VARCHAR | **Primary key** - Unique tag identifier |
-| vendor | VARCHAR | Detected vendor |
-| confidence | FLOAT | Classification confidence |
-| rule_id | VARCHAR | Rule that matched |
-| last_lat | FLOAT | Last known latitude |
-| last_lon | FLOAT | Last known longitude |
-| last_rssi | INTEGER | Last RSSI value |
-| last_seen | TIMESTAMP | Last observation time |
-| site_id | VARCHAR | Associated site |
-| is_moving | BOOLEAN | Movement indicator |
-| beacon_uuid | VARCHAR | iBeacon UUID (reference) |
-| beacon_major | INTEGER | iBeacon Major (reference) |
-| beacon_minor | INTEGER | iBeacon Minor (reference) |
-| updated_at | TIMESTAMP | Last update time |
+| Column       | Type      | Description                             |
+| ------------ | --------- | --------------------------------------- |
+| **tag_id**   | VARCHAR   | **Primary key** - Unique tag identifier |
+| vendor       | VARCHAR   | Detected vendor                         |
+| confidence   | FLOAT     | Classification confidence               |
+| rule_id      | VARCHAR   | Rule that matched                       |
+| last_lat     | FLOAT     | Last known latitude                     |
+| last_lon     | FLOAT     | Last known longitude                    |
+| last_rssi    | INTEGER   | Last RSSI value                         |
+| last_seen    | TIMESTAMP | Last observation time                   |
+| site_id      | VARCHAR   | Associated site                         |
+| is_moving    | BOOLEAN   | Movement indicator                      |
+| beacon_uuid  | VARCHAR   | iBeacon UUID (reference)                |
+| beacon_major | INTEGER   | iBeacon Major (reference)               |
+| beacon_minor | INTEGER   | iBeacon Minor (reference)               |
+| updated_at   | TIMESTAMP | Last update time                        |
 
 ### `ble_config`
+
 Configuration settings per site.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| site_id | VARCHAR | Primary key - site identifier |
-| upload_interval_sec | INTEGER | Upload interval (seconds) |
-| dedup_window_sec | INTEGER | Deduplication window (seconds) |
-| max_batch_size | INTEGER | Maximum batch size |
-| confidence_threshold | FLOAT | Minimum confidence threshold |
-| gps_poor_threshold_m | FLOAT | GPS accuracy threshold (meters) |
-| footprint_refresh_hours | INTEGER | Footprint refresh interval (hours) |
-| updated_at | TIMESTAMP | Last update time |
+| Column                  | Type      | Description                        |
+| ----------------------- | --------- | ---------------------------------- |
+| site_id                 | VARCHAR   | Primary key - site identifier      |
+| upload_interval_sec     | INTEGER   | Upload interval (seconds)          |
+| dedup_window_sec        | INTEGER   | Deduplication window (seconds)     |
+| max_batch_size          | INTEGER   | Maximum batch size                 |
+| confidence_threshold    | FLOAT     | Minimum confidence threshold       |
+| gps_poor_threshold_m    | FLOAT     | GPS accuracy threshold (meters)    |
+| footprint_refresh_hours | INTEGER   | Footprint refresh interval (hours) |
+| updated_at              | TIMESTAMP | Last update time                   |
 
 ### `vendor_footprint`
+
 Stores vendor classification rules.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Primary key |
-| version | VARCHAR | Version identifier |
-| rules | JSONB | Classification rules (JSON) |
-| generated_at | TIMESTAMP | Generation timestamp |
-| is_active | BOOLEAN | Active status flag |
+| Column       | Type      | Description                 |
+| ------------ | --------- | --------------------------- |
+| id           | SERIAL    | Primary key                 |
+| version      | VARCHAR   | Version identifier          |
+| rules        | JSONB     | Classification rules (JSON) |
+| generated_at | TIMESTAMP | Generation timestamp        |
+| is_active    | BOOLEAN   | Active status flag          |
 
 ## API Endpoints
 
@@ -194,6 +210,7 @@ Stores vendor classification rules.
 Returns application health status.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -211,10 +228,12 @@ Returns application health status.
 Accepts a batch of BLE observation frames. Validates and stores observations, updates tag states.
 
 **Validation Rules:**
+
 - Confidence must be ≥ 0.8
 - GPS accuracy must be ≤ 50 meters (if provided)
 
 **Request Body:**
+
 ```json
 [
   {
@@ -226,7 +245,7 @@ Accepts a batch of BLE observation frames. Validates and stores observations, up
     "rssi": -61,
     "tx_power": 4,
     "lat": 40.7128,
-    "lon": -74.0060,
+    "lon": -74.006,
     "accuracy_m": 15.0,
     "vendor": "blc-moko",
     "confidence": 1.0,
@@ -243,7 +262,7 @@ Accepts a batch of BLE observation frames. Validates and stores observations, up
     "ts_utc": "2026-03-06T12:35:00Z",
     "rssi": -70,
     "tx_power": -4,
-    "lat": 40.7130,
+    "lat": 40.713,
     "lon": -74.0062,
     "accuracy_m": 20.0,
     "vendor": "linxens",
@@ -257,6 +276,7 @@ Accepts a batch of BLE observation frames. Validates and stores observations, up
 ```
 
 **Response:**
+
 ```json
 {
   "received": 1,
@@ -275,6 +295,7 @@ Accepts a batch of BLE observation frames. Validates and stores observations, up
 Returns the active vendor classification ruleset.
 
 **Response:**
+
 ```json
 {
   "version": "2026.02.23-1",
@@ -309,9 +330,11 @@ Returns the active vendor classification ruleset.
 Returns BLE scanning configuration for a specific site.
 
 **Query Parameters:**
+
 - `site_id` (required): Site identifier
 
 **Response:**
+
 ```json
 {
   "site_id": "nyc_downtown",
@@ -325,6 +348,7 @@ Returns BLE scanning configuration for a specific site.
 ```
 
 **Default Values** (if site not found):
+
 - upload_interval_sec: 5
 - dedup_window_sec: 10
 - max_batch_size: 200
@@ -426,4 +450,4 @@ lsof -ti:8000 | xargs kill -9
 
 ## Support
 
-For issues or questions, contact the development team or open an issue in the repository. 
+For issues or questions, contact the development team or open an issue in the repository.
