@@ -81,7 +81,7 @@ async def create_observations(
             continue
         
         # Validation: GPS accuracy threshold
-        if frame.accuracy_m is not None and frame.accuracy_m > 50.0:
+        if frame.accuracy_m is not None and frame.accuracy_m > 100.0:
             rejected += 1
             continue
         
