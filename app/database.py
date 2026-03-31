@@ -3,6 +3,8 @@ Database configuration and session management
 Uses async SQLAlchemy with asyncpg for PostgreSQL
 """
 import os
+import ssl
+import certifi
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -17,16 +19,17 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set")
 
 # Create async engine
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL query logging in development
     pool_size=10,
     max_overflow=20,
     connect_args={
-        # asyncpg expects a bool/SSLContext, not the string "require"
-        "ssl": True,  # Force SSL connection for Supabase/managed PG
-        "timeout": 30,  # Increase timeout to 30 seconds
-    }
+        "ssl": ssl_context,  # Validate certs using certifi bundle
+        "timeout": 30,
+    },
 )
 
 # Create async session factory
