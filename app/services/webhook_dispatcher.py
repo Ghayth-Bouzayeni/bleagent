@@ -96,4 +96,3 @@ async def stop_webhook_dispatcher(handle: WebhookDispatcherHandle | None) -> Non
         await handle.task
     except asyncio.CancelledError:
         pass
-*** End Patch
