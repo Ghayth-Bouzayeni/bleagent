@@ -23,7 +23,8 @@ engine = create_async_engine(
     pool_size=10,
     max_overflow=20,
     connect_args={
-        "ssl": "require",  # Force SSL connection for Supabase
+        # asyncpg expects a bool/SSLContext, not the string "require"
+        "ssl": True,  # Force SSL connection for Supabase/managed PG
         "timeout": 30,  # Increase timeout to 30 seconds
     }
 )
